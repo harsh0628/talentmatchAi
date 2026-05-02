@@ -2,9 +2,10 @@
   "name": "@talentmatch/api",
   "version": "0.1.0",
   "private": true,
-  "main": "src/server.js",
+  "main": "HttpTrigger/index.js",
   "scripts": {
     "dev": "nodemon src/server.js",
+    "dev:nodb": "node src/server_nodb.js",
     "start": "node src/server.js",
     "seed:dummy": "node src/scripts/seedDummyData.js",
     "seed:benchmarks": "node src/scripts/seedBenchmarks.js",
