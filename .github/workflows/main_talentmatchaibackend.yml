@@ -59,3 +59,5 @@ jobs:
           app-name: 'talentmatchaibackend'
           package: './apps/api'
           publish-profile: ${{ secrets.AZURE_FUNCTIONAPP_PUBLISH_PROFILE_TALENTMATCHAI_BACKEND }}
+          scm-do-build-during-deployment: false
+          enable-oryx-build: false
