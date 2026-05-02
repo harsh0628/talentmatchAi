@@ -1,0 +1,23 @@
+{
+  "name": "talentmatch-ai",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "apps/web",
+    "apps/api"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w apps/web",
+    "dev:web": "npm run dev -w apps/web",
+    "dev:api": "npm run dev -w apps/api",
+    "lint": "echo \"Lint will be added in next step\"",
+    "test": "echo \"Tests will be added in next step\"",
+    "build": "npm run build -w apps/web"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "mongoose": "^6.13.9"
+  }
+}

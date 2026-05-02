@@ -1,0 +1,4 @@
+resource_group_name = "ai-talentmatch"
+location            = "centralindia"
+cosmos_account_name = "talentmatchcosmosdb"
+mongo_database_name = "talentmatch"

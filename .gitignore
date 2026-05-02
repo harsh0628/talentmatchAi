@@ -1,0 +1,23 @@
+# dependencies
+node_modules/
+
+# logs
+*.log
+npm-debug.log*
+
+# env
+.env
+.env.*
+
+# build
+dist/
+build/
+coverage/
+
+# editor
+.vscode/
+.idea/
+.DS_Store
+
+# docker
+*.pid

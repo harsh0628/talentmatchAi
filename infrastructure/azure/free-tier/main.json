@@ -1,0 +1,423 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.42.1.51946",
+      "templateHash": "6706332615700996224"
+    }
+  },
+  "parameters": {
+    "location": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]"
+    },
+    "vmName": {
+      "type": "string",
+      "defaultValue": "talentmatch-vm"
+    },
+    "adminUsername": {
+      "type": "string",
+      "defaultValue": "azureuser"
+    },
+    "sshPublicKey": {
+      "type": "securestring"
+    },
+    "repoUrl": {
+      "type": "string"
+    },
+    "repoBranch": {
+      "type": "string",
+      "defaultValue": "main"
+    },
+    "clientUrl": {
+      "type": "string"
+    },
+    "mongodbUri": {
+      "type": "securestring"
+    },
+    "jwtAccessSecret": {
+      "type": "securestring"
+    },
+    "jwtRefreshSecret": {
+      "type": "securestring"
+    },
+    "geminiApiKey": {
+      "type": "securestring",
+      "defaultValue": ""
+    },
+    "vmSize": {
+      "type": "string",
+      "defaultValue": "Standard_B1s"
+    },
+    "osDiskSizeGb": {
+      "type": "int",
+      "defaultValue": 32
+    },
+    "storageAccountName": {
+      "type": "string"
+    },
+    "cosmosAccountName": {
+      "type": "string"
+    },
+    "sqlServerName": {
+      "type": "string"
+    },
+    "sqlDatabaseName": {
+      "type": "string",
+      "defaultValue": "talentmatchdb"
+    },
+    "sqlAdminLogin": {
+      "type": "string"
+    },
+    "sqlAdminPassword": {
+      "type": "securestring"
+    },
+    "textAnalyticsName": {
+      "type": "string"
+    },
+    "computerVisionName": {
+      "type": "string"
+    },
+    "translatorName": {
+      "type": "string"
+    }
+  },
+  "variables": {
+    "$fxv#0": "#cloud-config\r\npackage_update: true\r\npackages:\r\n  - git\r\n  - ca-certificates\r\n  - curl\r\n  - gnupg\r\nruncmd:\r\n  - curl -fsSL https://get.docker.com | sh\r\n  - apt-get update\r\n  - apt-get install -y docker-compose-plugin\r\n  - usermod -aG docker azureuser\r\n  - systemctl enable docker\r\n  - |\r\n      mkdir -p /opt/talentmatch\r\n      git clone --branch __REPO_BRANCH__ __REPO_URL__ /opt/talentmatch\r\n      cat > /opt/talentmatch/.env <<EOF\r\n      MONGODB_URI=__MONGODB_URI__\r\n      CLIENT_URL=__CLIENT_URL__\r\n      JWT_ACCESS_SECRET=__JWT_ACCESS_SECRET__\r\n      JWT_REFRESH_SECRET=__JWT_REFRESH_SECRET__\r\n      GEMINI_API_KEY=__GEMINI_API_KEY__\r\n      EOF\r\n      cd /opt/talentmatch\r\n      bash infrastructure/azure/vm/deploy-on-vm.sh\r\n",
+    "vnetName": "[format('{0}-vnet', parameters('vmName'))]",
+    "subnetName": "app-subnet",
+    "nsgName": "[format('{0}-nsg', parameters('vmName'))]",
+    "publicIpName": "[format('{0}-ip', parameters('vmName'))]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Network/virtualNetworks",
+      "apiVersion": "2023-11-01",
+      "name": "[variables('vnetName')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "addressSpace": {
+          "addressPrefixes": [
+            "10.0.0.0/16"
+          ]
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Network/virtualNetworks/subnets",
+      "apiVersion": "2023-11-01",
+      "name": "[format('{0}/{1}', variables('vnetName'), variables('subnetName'))]",
+      "properties": {
+        "addressPrefix": "10.0.0.0/24"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/virtualNetworks', variables('vnetName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Network/networkSecurityGroups",
+      "apiVersion": "2023-11-01",
+      "name": "[variables('nsgName')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "securityRules": [
+          {
+            "name": "AllowSSH",
+            "properties": {
+              "priority": 1000,
+              "direction": "Inbound",
+              "access": "Allow",
+              "protocol": "Tcp",
+              "sourcePortRange": "*",
+              "destinationPortRange": "22",
+              "sourceAddressPrefix": "*",
+              "destinationAddressPrefix": "*"
+            }
+          },
+          {
+            "name": "AllowHTTP",
+            "properties": {
+              "priority": 1010,
+              "direction": "Inbound",
+              "access": "Allow",
+              "protocol": "Tcp",
+              "sourcePortRange": "*",
+              "destinationPortRange": "80",
+              "sourceAddressPrefix": "*",
+              "destinationAddressPrefix": "*"
+            }
+          },
+          {
+            "name": "AllowHTTPS",
+            "properties": {
+              "priority": 1020,
+              "direction": "Inbound",
+              "access": "Allow",
+              "protocol": "Tcp",
+              "sourcePortRange": "*",
+              "destinationPortRange": "443",
+              "sourceAddressPrefix": "*",
+              "destinationAddressPrefix": "*"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.Network/publicIPAddresses",
+      "apiVersion": "2023-11-01",
+      "name": "[variables('publicIpName')]",
+      "location": "[parameters('location')]",
+      "sku": {
+        "name": "Basic"
+      },
+      "properties": {
+        "publicIPAllocationMethod": "Dynamic"
+      }
+    },
+    {
+      "type": "Microsoft.Network/networkInterfaces",
+      "apiVersion": "2023-11-01",
+      "name": "[format('{0}-nic', parameters('vmName'))]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "ipConfigurations": [
+          {
+            "name": "ipconfig1",
+            "properties": {
+              "subnet": {
+                "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', split(format('{0}/{1}', variables('vnetName'), variables('subnetName')), '/')[0], split(format('{0}/{1}', variables('vnetName'), variables('subnetName')), '/')[1])]"
+              },
+              "privateIPAllocationMethod": "Dynamic",
+              "publicIPAddress": {
+                "id": "[resourceId('Microsoft.Network/publicIPAddresses', variables('publicIpName'))]"
+              }
+            }
+          }
+        ],
+        "networkSecurityGroup": {
+          "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('nsgName'))]"
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/networkSecurityGroups', variables('nsgName'))]",
+        "[resourceId('Microsoft.Network/publicIPAddresses', variables('publicIpName'))]",
+        "[resourceId('Microsoft.Network/virtualNetworks/subnets', split(format('{0}/{1}', variables('vnetName'), variables('subnetName')), '/')[0], split(format('{0}/{1}', variables('vnetName'), variables('subnetName')), '/')[1])]"
+      ]
+    },
+    {
+      "type": "Microsoft.Compute/virtualMachines",
+      "apiVersion": "2023-09-01",
+      "name": "[parameters('vmName')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "hardwareProfile": {
+          "vmSize": "[parameters('vmSize')]"
+        },
+        "osProfile": {
+          "computerName": "[parameters('vmName')]",
+          "adminUsername": "[parameters('adminUsername')]",
+          "customData": "[base64(replace(replace(replace(replace(replace(replace(replace(variables('$fxv#0'), '__REPO_URL__', parameters('repoUrl')), '__REPO_BRANCH__', parameters('repoBranch')), '__CLIENT_URL__', parameters('clientUrl')), '__MONGODB_URI__', parameters('mongodbUri')), '__JWT_ACCESS_SECRET__', parameters('jwtAccessSecret')), '__JWT_REFRESH_SECRET__', parameters('jwtRefreshSecret')), '__GEMINI_API_KEY__', parameters('geminiApiKey')))]",
+          "linuxConfiguration": {
+            "disablePasswordAuthentication": true,
+            "ssh": {
+              "publicKeys": [
+                {
+                  "path": "[format('/home/{0}/.ssh/authorized_keys', parameters('adminUsername'))]",
+                  "keyData": "[parameters('sshPublicKey')]"
+                }
+              ]
+            }
+          }
+        },
+        "storageProfile": {
+          "imageReference": {
+            "publisher": "Canonical",
+            "offer": "0001-com-ubuntu-server-jammy",
+            "sku": "22_04-lts-gen2",
+            "version": "latest"
+          },
+          "osDisk": {
+            "createOption": "FromImage",
+            "diskSizeGB": "[parameters('osDiskSizeGb')]",
+            "managedDisk": {
+              "storageAccountType": "Standard_LRS"
+            }
+          }
+        },
+        "networkProfile": {
+          "networkInterfaces": [
+            {
+              "id": "[resourceId('Microsoft.Network/networkInterfaces', format('{0}-nic', parameters('vmName')))]"
+            }
+          ]
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/networkInterfaces', format('{0}-nic', parameters('vmName')))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Storage/storageAccounts",
+      "apiVersion": "2023-01-01",
+      "name": "[parameters('storageAccountName')]",
+      "location": "[parameters('location')]",
+      "sku": {
+        "name": "Standard_LRS"
+      },
+      "kind": "StorageV2",
+      "properties": {
+        "accessTier": "Hot",
+        "allowBlobPublicAccess": false,
+        "minimumTlsVersion": "TLS1_2"
+      }
+    },
+    {
+      "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
+      "apiVersion": "2023-01-01",
+      "name": "[format('{0}/default/uploads', parameters('storageAccountName'))]",
+      "properties": {},
+      "dependsOn": [
+        "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Storage/storageAccounts/fileServices/shares",
+      "apiVersion": "2023-01-01",
+      "name": "[format('{0}/default/shared', parameters('storageAccountName'))]",
+      "properties": {
+        "shareQuota": 100
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.DocumentDB/databaseAccounts",
+      "apiVersion": "2023-04-15",
+      "name": "[parameters('cosmosAccountName')]",
+      "location": "[parameters('location')]",
+      "kind": "MongoDB",
+      "properties": {
+        "enableFreeTier": true,
+        "databaseAccountOfferType": "Standard",
+        "locations": [
+          {
+            "locationName": "[parameters('location')]",
+            "failoverPriority": 0
+          }
+        ],
+        "consistencyPolicy": {
+          "defaultConsistencyLevel": "Session"
+        },
+        "capabilities": [
+          {
+            "name": "EnableMongo"
+          }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.Sql/servers",
+      "apiVersion": "2022-05-01-preview",
+      "name": "[parameters('sqlServerName')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "administratorLogin": "[parameters('sqlAdminLogin')]",
+        "administratorLoginPassword": "[parameters('sqlAdminPassword')]",
+        "publicNetworkAccess": "Enabled"
+      }
+    },
+    {
+      "type": "Microsoft.Sql/servers/databases",
+      "apiVersion": "2022-05-01-preview",
+      "name": "[format('{0}/{1}', parameters('sqlServerName'), parameters('sqlDatabaseName'))]",
+      "sku": {
+        "name": "S0",
+        "tier": "Standard"
+      },
+      "properties": {
+        "collation": "SQL_Latin1_General_CP1_CI_AS",
+        "maxSizeBytes": 2147483648
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Sql/servers', parameters('sqlServerName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.CognitiveServices/accounts",
+      "apiVersion": "2023-05-01",
+      "name": "[parameters('textAnalyticsName')]",
+      "location": "[parameters('location')]",
+      "kind": "TextAnalytics",
+      "sku": {
+        "name": "F0"
+      },
+      "properties": {
+        "publicNetworkAccess": "Enabled"
+      }
+    },
+    {
+      "type": "Microsoft.CognitiveServices/accounts",
+      "apiVersion": "2023-05-01",
+      "name": "[parameters('computerVisionName')]",
+      "location": "[parameters('location')]",
+      "kind": "ComputerVision",
+      "sku": {
+        "name": "F0"
+      },
+      "properties": {
+        "publicNetworkAccess": "Enabled"
+      }
+    },
+    {
+      "type": "Microsoft.CognitiveServices/accounts",
+      "apiVersion": "2023-05-01",
+      "name": "[parameters('translatorName')]",
+      "location": "[parameters('location')]",
+      "kind": "TextTranslation",
+      "sku": {
+        "name": "F0"
+      },
+      "properties": {
+        "publicNetworkAccess": "Enabled"
+      }
+    }
+  ],
+  "outputs": {
+    "vmPublicIp": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Network/publicIPAddresses', variables('publicIpName')), '2023-11-01').ipAddress]"
+    },
+    "storageAccount": {
+      "type": "string",
+      "value": "[parameters('storageAccountName')]"
+    },
+    "cosmosAccount": {
+      "type": "string",
+      "value": "[parameters('cosmosAccountName')]"
+    },
+    "cosmosEndpoint": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('cosmosAccountName')), '2023-04-15').documentEndpoint]"
+    },
+    "sqlServerFqdn": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Sql/servers', parameters('sqlServerName')), '2022-05-01-preview').fullyQualifiedDomainName]"
+    },
+    "textAnalyticsEndpoint": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.CognitiveServices/accounts', parameters('textAnalyticsName')), '2023-05-01').endpoint]"
+    },
+    "computerVisionEndpoint": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.CognitiveServices/accounts', parameters('computerVisionName')), '2023-05-01').endpoint]"
+    },
+    "translatorEndpoint": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.CognitiveServices/accounts', parameters('translatorName')), '2023-05-01').endpoint]"
+    }
+  }
+}
