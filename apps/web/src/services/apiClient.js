@@ -1,6 +1,6 @@
 const configuredApiUrl = (import.meta.env.VITE_API_URL || '').trim();
 
-export const API_BASE_URL = configuredApiUrl || (import.meta.env.DEV ? 'http://localhost:5000/api' : '/api');
+export const API_BASE_URL = configuredApiUrl || (import.meta.env.DEV ? 'http://localhost:5000/api' : 'https://talentmatchaibackend.azurewebsites.net/api');
 
 const ACCESS_TOKEN_KEY = 'tm_access_token';
 const AUTH_USER_KEY = 'tm_auth_user';
