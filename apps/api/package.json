@@ -4,6 +4,7 @@
   "private": true,
   "main": "HttpTrigger/index.js",
   "scripts": {
+    "build": "echo 'Build complete - no compilation needed for Node.js'",
     "dev": "nodemon src/server.js",
     "dev:nodb": "node src/server_nodb.js",
     "start": "node src/server.js",
