@@ -1,15 +1,22 @@
 const { spawn } = require('child_process');
 
-const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm';
 let shuttingDown = false;
 
-function startProcess(label, command, args) {
-  const child = spawn(command, args, {
-    cwd: process.cwd(),
-    shell: false,
-    stdio: 'inherit',
-    env: process.env,
-  });
+function startProcess(label, commandLine) {
+  const isWindows = process.platform === 'win32';
+  const child = isWindows
+    ? spawn(process.env.ComSpec || 'cmd.exe', ['/d', '/s', '/c', commandLine], {
+        cwd: process.cwd(),
+        shell: false,
+        stdio: 'inherit',
+        env: process.env,
+      })
+    : spawn('npm', commandLine.split(' '), {
+        cwd: process.cwd(),
+        shell: false,
+        stdio: 'inherit',
+        env: process.env,
+      });
 
   child.on('exit', (code, signal) => {
     if (shuttingDown || code === 0) {
@@ -26,8 +33,8 @@ function startProcess(label, command, args) {
   return child;
 }
 
-const api = startProcess('API', npmCommand, ['run', 'dev', '--workspace', 'apps/api']);
-const web = startProcess('Web', npmCommand, ['run', 'dev', '--workspace', 'apps/web']);
+const api = startProcess('API', 'npm run dev -w apps/api');
+const web = startProcess('Web', 'npm run dev -w apps/web');
 
 function shutdown() {
   shuttingDown = true;

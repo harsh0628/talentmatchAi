@@ -1,7 +1,19 @@
 const path = require('path');
+const fs = require('fs');
 const dotenv = require('dotenv');
 
-dotenv.config({ path: path.join(process.cwd(), '.env') });
+const envCandidates = [
+  path.join(process.cwd(), 'apps', 'api', '.env'),
+  path.join(process.cwd(), '.env'),
+  path.join(__dirname, '..', '..', '.env'),
+];
+
+for (const envPath of envCandidates) {
+  if (fs.existsSync(envPath)) {
+    dotenv.config({ path: envPath });
+    break;
+  }
+}
 
 const env = {
   nodeEnv: process.env.NODE_ENV || 'development',

@@ -28,6 +28,7 @@ The API reads `MONGODB_URI` from `.env`. For local development use a local Mongo
 Use one of these options:
 - Local MongoDB: install MongoDB Community Server, start the service, and keep `MONGODB_URI=mongodb://127.0.0.1:27017/talentmatch`.
 - MongoDB Atlas free tier: create an M0 cluster, create a database user, allow your IP address, and copy the connection string into `apps/api/.env`.
+- If your MongoDB password contains special characters such as `@`, `:`, or `/`, URL-encode the password before placing it in the connection string.
 
 The API expects `MONGODB_URI` and `CLIENT_URL` in `apps/api/.env`. A working local example is already in [apps/api/.env.example](apps/api/.env.example).
 
