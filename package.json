@@ -7,7 +7,7 @@
     "apps/api"
   ],
   "scripts": {
-    "dev": "npm run dev -w apps/web",
+    "dev": "node scripts/dev.js",
     "dev:web": "npm run dev -w apps/web",
     "dev:api": "npm run dev -w apps/api",
     "lint": "echo \"Lint will be added in next step\"",

@@ -38,11 +38,28 @@ app.use(express.json());
 app.use(morgan(':requestId :method :url :status :response-time ms'));
 app.use(metricsMiddleware);
 
+app.get('/', (req, res) => {
+	res.status(200).json({
+		success: true,
+		message: 'TalentMatch AI API is running',
+		endpoints: {
+			health: '/health',
+			metrics: '/metrics',
+		},
+	});
+});
+
 app.get('/health', (req, res) => {
 	res.status(200).json({ success: true, message: 'API is healthy' });
 });
 
+app.get('/api/health', (req, res) => {
+	res.status(200).json({ success: true, message: 'API is healthy' });
+});
+
 app.get('/metrics', metricsHandler);
+
+app.get('/api/metrics', metricsHandler);
 
 app.use('/api/auth', authRouter);
 
