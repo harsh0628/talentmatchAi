@@ -31,8 +31,18 @@ function AppLayout() {
     <div className="app-shell">
       {/* Left side navigation area */}
       <aside className="sidebar">
-        <h2>TalentMatch</h2>
-        <p className="sidebar-subtitle">{authUser?.role || 'User'} Panel</p>
+        <div className="brand-lockup">
+          <span className="brand-mark">TM</span>
+          <div>
+            <h2>TalentMatch</h2>
+            <p className="sidebar-subtitle">AI hiring workspace</p>
+          </div>
+        </div>
+
+        <div className="workspace-label">
+          <span className="status-dot" />
+          {authUser?.role || 'User'} workspace
+        </div>
 
         <nav className="menu">
           {visibleNavItems.map((item) => (
@@ -63,6 +73,10 @@ function AppLayout() {
           <div>
             <h1 className="topbar-title">Hiring Workspace</h1>
             <p className="topbar-text">MERN + AI recruiter operations suite</p>
+          </div>
+          <div className="topbar-meta">
+            <span className="topbar-pill">Azure connected</span>
+            <span className="topbar-date">Operations console</span>
           </div>
         </header>
 

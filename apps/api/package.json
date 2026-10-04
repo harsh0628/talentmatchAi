@@ -6,11 +6,7 @@
   "scripts": {
     "build": "echo 'Build complete - no compilation needed for Node.js'",
     "dev": "node src/server.js",
-    "dev:nodb": "node src/server_nodb.js",
-    "start": "node src/server.js",
-    "seed:dummy": "node src/scripts/seedDummyData.js",
-    "seed:benchmarks": "node src/scripts/seedBenchmarks.js",
-    "seed:all": "npm run seed:dummy && npm run seed:benchmarks"
+    "start": "node src/server.js"
   },
   "devDependencies": {
     "nodemon": "^3.1.14"

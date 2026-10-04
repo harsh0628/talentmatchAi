@@ -42,7 +42,7 @@ For the deployment you described, a VM-based setup is the simplest fit:
 ## Main Pieces
 - `apps/api`: Node.js + Express API with MongoDB/Mongoose and Prometheus metrics.
 - `apps/web`: React + Vite frontend.
-- `infrastructure/azure`: Azure infrastructure notes and deployment references.
+- Azure infrastructure and CI/CD deployment are managed separately from this application repository.
 
 ## Notes
 The repository is intentionally kept to a single top-level project document here in [README.md](README.md).

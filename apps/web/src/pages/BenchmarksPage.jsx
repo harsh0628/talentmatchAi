@@ -373,8 +373,7 @@ function BenchmarksPage() {
 			) : (
 				<div className="panel">
 					<p className="empty-state">
-						No benchmark test cases found. Run:{' '}
-						<code>npm run seed:benchmarks</code> in the API folder.
+						No benchmark test cases found. Create benchmark cases from the API or database before running an evaluation.
 					</p>
 				</div>
 			)}
