@@ -68,6 +68,8 @@ The next workflow run authenticated successfully but could not find `talentmatch
 
 The AKS subscription was confirmed as `bb0b462e-74bc-4e98-911a-07619d0eb251`. Verify the ACR subscription before rerunning Actions and set `AZURE_SUBSCRIPTION_ID` to the subscription containing both resources.
 
+The GitHub Actions service principal now has `AcrPush` and registry-scoped `Contributor` on `talentmatchacr2026`, plus `Contributor` on `myAKSResourceGroup`. Azure OIDC authentication and subscription selection have both passed; the next workflow run should proceed to ACR image builds.
+
 ### Efficient GitHub Actions setup checklist
 
 1. Keep only `.github/workflows/deploy-aks.yml`; remove obsolete Static Web Apps and Function App workflows.
