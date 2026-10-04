@@ -1,0 +1,58 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: talentmatch-api-secrets
+type: Opaque
+stringData:
+  MONGODB_URI: "<REPLACE_WITH_MONGODB_CONNECTION_STRING>"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: talentmatch-api
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: talentmatch-api
+  template:
+    metadata:
+      labels:
+        app: talentmatch-api
+    spec:
+      containers:
+        - name: api
+          image: talentmatchacr2026.azurecr.io/talentmatch-api:v2
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 5000
+          env:
+            - name: NODE_ENV
+              value: "production"
+            - name: PORT
+              value: "5000"
+            - name: CLIENT_URL
+              value: "http://<REPLACE_WITH_FRONTEND_EXTERNAL_IP>"
+            - name: SESSION_COOKIE_NAME
+              value: "tm_session"
+            - name: SESSION_MAX_AGE_MS
+              value: "604800000"
+            - name: SESSION_COOKIE_SECURE
+              value: "false"
+            - name: MONGODB_URI
+              valueFrom:
+                secretKeyRef:
+                  name: talentmatch-api-secrets
+                  key: MONGODB_URI
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: talentmatch-api
+spec:
+  type: ClusterIP
+  selector:
+    app: talentmatch-api
+  ports:
+    - port: 5000
+      targetPort: 5000

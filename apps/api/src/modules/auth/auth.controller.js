@@ -12,7 +12,7 @@ function buildRequestContext(req) {
 function setSessionCookie(res, sessionId) {
 	res.cookie(env.sessionCookieName, sessionId, {
 		httpOnly: true,
-		secure: env.nodeEnv === 'production',
+		secure: env.sessionCookieSecure,
 		sameSite: 'lax',
 		maxAge: env.sessionMaxAgeMs,
 		path: '/',
@@ -22,7 +22,7 @@ function setSessionCookie(res, sessionId) {
 function clearSessionCookie(res) {
 	res.clearCookie(env.sessionCookieName, {
 		httpOnly: true,
-		secure: env.nodeEnv === 'production',
+		secure: env.sessionCookieSecure,
 		sameSite: 'lax',
 		path: '/',
 	});

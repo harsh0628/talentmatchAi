@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: talentmatch-web
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: talentmatch-web
+  template:
+    metadata:
+      labels:
+        app: talentmatch-web
+    spec:
+      containers:
+        - name: web
+          image: talentmatchacr2026.azurecr.io/talentmatch-web:v2
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: talentmatch-web
+spec:
+  type: LoadBalancer
+  selector:
+    app: talentmatch-web
+  ports:
+    - port: 80
+      targetPort: 80

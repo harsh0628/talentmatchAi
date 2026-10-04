@@ -22,6 +22,7 @@ const env = {
   clientUrl: process.env.CLIENT_URL || 'http://localhost:5173',
   sessionCookieName: process.env.SESSION_COOKIE_NAME || 'tm_session',
   sessionMaxAgeMs: Number(process.env.SESSION_MAX_AGE_MS || 604800000),
+  sessionCookieSecure: process.env.SESSION_COOKIE_SECURE === 'true',
   authMaxFailedLoginAttempts: Number(process.env.AUTH_MAX_FAILED_LOGIN_ATTEMPTS || 5),
   authLockoutMinutes: Number(process.env.AUTH_LOCKOUT_MINUTES || 30),
   geminiApiKey: process.env.GEMINI_API_KEY || '',

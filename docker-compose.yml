@@ -26,6 +26,7 @@ services:
       CLIENT_URL: http://localhost:5173
       SESSION_COOKIE_NAME: tm_session
       SESSION_MAX_AGE_MS: 604800000
+      SESSION_COOKIE_SECURE: "false"
       AUTH_MAX_FAILED_LOGIN_ATTEMPTS: 5
       AUTH_LOCKOUT_MINUTES: 30
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
@@ -34,6 +35,10 @@ services:
       AI_ENABLE_HEURISTIC_FALLBACK: ${AI_ENABLE_HEURISTIC_FALLBACK:-true}
     ports:
       - "5000:5000"
+    networks:
+      default:
+        aliases:
+          - talentmatch-api
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:5000/health"]
       interval: 10s
@@ -44,7 +49,7 @@ services:
     build:
       context: ./apps/web
       args:
-        VITE_API_URL: http://localhost:5000/api
+        VITE_API_URL: /api
     restart: unless-stopped
     depends_on:
       api:
