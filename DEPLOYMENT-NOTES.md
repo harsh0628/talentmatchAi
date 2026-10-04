@@ -58,6 +58,8 @@ Configure these GitHub repository secrets before pushing to `main`:
 
 The Azure service principal must have `Contributor` access to the AKS resource group and `AcrPush` access to the registry. The AKS kubelet identity already has `AcrPull`. The workflow tags each image with the Git commit SHA, updates the API and frontend Deployments, ensures the API Service is internal, and waits for both rollouts.
 
+This AKS cluster does not have managed Entra ID/Azure RBAC enabled (`aadProfile.enableAzureRbac` returned blank). The workflow therefore uses `az aks get-credentials --admin`. This is suitable for the current demo because the GitHub identity has `Contributor` on the AKS resource group. For a hardened production setup, enable managed Entra ID and Azure RBAC deliberately, then replace the admin kubeconfig with namespace-scoped deployment permissions.
+
 ### Efficient GitHub Actions setup checklist
 
 1. Keep only `.github/workflows/deploy-aks.yml`; remove obsolete Static Web Apps and Function App workflows.

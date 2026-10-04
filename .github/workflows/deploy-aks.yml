@@ -54,6 +54,7 @@ jobs:
           az aks get-credentials \
             --resource-group "$RESOURCE_GROUP" \
             --name "$AKS_NAME" \
+            --admin \
             --overwrite-existing
 
       - name: Ensure API Service is internal
