@@ -10,7 +10,7 @@ env:
   RESOURCE_GROUP: myAKSResourceGroup
   AKS_NAME: aks-web-demo
   ACR_NAME: talentmatchacr2026
-  ACR_RESOURCE_GROUP: ai-talentmatch
+  ACR_RESOURCE_GROUP: myAKSResourceGroup
   API_DEPLOYMENT: talentmatch-api
   WEB_DEPLOYMENT: talentmatch-web
 
