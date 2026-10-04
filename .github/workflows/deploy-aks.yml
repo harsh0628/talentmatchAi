@@ -10,6 +10,7 @@ env:
   RESOURCE_GROUP: myAKSResourceGroup
   AKS_NAME: aks-web-demo
   ACR_NAME: talentmatchacr2026
+  ACR_RESOURCE_GROUP: ai-talentmatch
   API_DEPLOYMENT: talentmatch-api
   WEB_DEPLOYMENT: talentmatch-web
 
@@ -36,6 +37,7 @@ jobs:
         run: |
           az acr build \
             --registry "$ACR_NAME" \
+            --resource-group "$ACR_RESOURCE_GROUP" \
             --image "talentmatch-api:${GITHUB_SHA}" \
             --file apps/api/Dockerfile \
             apps/api
@@ -44,6 +46,7 @@ jobs:
         run: |
           az acr build \
             --registry "$ACR_NAME" \
+            --resource-group "$ACR_RESOURCE_GROUP" \
             --image "talentmatch-web:${GITHUB_SHA}" \
             --file apps/web/Dockerfile \
             --build-arg VITE_API_URL=/api \
