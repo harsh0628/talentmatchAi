@@ -64,7 +64,7 @@ This AKS cluster does not have managed Entra ID/Azure RBAC enabled (`aadProfile.
 
 The first GitHub Actions run reached Azure OIDC successfully but failed with `AADSTS70025`, because the `talentmatch-github-actions` app had no federated identity credential. The credential must match `repo:harsh0628/talentmatchAi:ref:refs/heads/main`, issuer `https://token.actions.githubusercontent.com`, and audience `api://AzureADTokenExchange`.
 
-The next workflow run authenticated successfully but could not find `talentmatchacr2026` because the ACR resource group was not explicit. The workflow now passes `--resource-group myAKSResourceGroup` to both ACR builds so the ACR scope matches the same resource group used by the deploy identity. The `AZURE_SUBSCRIPTION_ID` secret must still be the subscription containing both the ACR and AKS resources.
+The next workflow run authenticated successfully but could not find `talentmatchacr2026` because the ACR resource group was not explicit. The workflow now passes `--resource-group ai-talentmatch` to both ACR builds. The `AZURE_SUBSCRIPTION_ID` secret must still be the subscription containing both the ACR and AKS resources.
 
 The AKS subscription was confirmed as `bb0b462e-74bc-4e98-911a-07619d0eb251`. Verify the ACR subscription before rerunning Actions and set `AZURE_SUBSCRIPTION_ID` to the subscription containing both resources.
 
