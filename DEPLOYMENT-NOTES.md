@@ -60,6 +60,10 @@ The Azure service principal must have `Contributor` access to the AKS resource g
 
 This AKS cluster does not have managed Entra ID/Azure RBAC enabled (`aadProfile.enableAzureRbac` returned blank). The workflow therefore uses `az aks get-credentials --admin`. This is suitable for the current demo because the GitHub identity has `Contributor` on the AKS resource group. For a hardened production setup, enable managed Entra ID and Azure RBAC deliberately, then replace the admin kubeconfig with namespace-scoped deployment permissions.
 
+### OIDC login failure and fix
+
+The first GitHub Actions run reached Azure OIDC successfully but failed with `AADSTS70025`, because the `talentmatch-github-actions` app had no federated identity credential. The credential must match `repo:harsh0628/talentmatchAi:ref:refs/heads/main`, issuer `https://token.actions.githubusercontent.com`, and audience `api://AzureADTokenExchange`.
+
 ### Efficient GitHub Actions setup checklist
 
 1. Keep only `.github/workflows/deploy-aks.yml`; remove obsolete Static Web Apps and Function App workflows.
