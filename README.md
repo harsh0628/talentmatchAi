@@ -30,7 +30,7 @@ Use one of these options:
 - MongoDB Atlas free tier: create an M0 cluster, create a database user, allow your IP address, and copy the connection string into `apps/api/.env`.
 - If your MongoDB password contains special characters such as `@`, `:`, or `/`, URL-encode the password before placing it in the connection string.
 
-The API expects `MONGODB_URI` and `CLIENT_URL` in `apps/api/.env`. A working local example is already in [apps/api/.env.example](apps/api/.env.example).
+The API expects `MONGODB_URI` and `CLIENT_URL` in `apps/api/.env`. A working local example is already in [apps/api/.env.example](apps/api/.env.example). Authentication uses a simple server-side session stored in an HTTP-only cookie; no JWT configuration is required.
 
 ## Recommended Azure Plan
 For the deployment you described, a VM-based setup is the simplest fit:

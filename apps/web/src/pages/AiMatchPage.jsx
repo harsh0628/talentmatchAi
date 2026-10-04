@@ -317,7 +317,7 @@ function AiMatchPage() {
               name="requiredSkills"
               value={form.requiredSkills}
               onChange={handleChange}
-              placeholder="Node.js, MongoDB, Express, JWT"
+              placeholder="Node.js, MongoDB, Express"
             />
           </div>
 

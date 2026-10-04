@@ -5,7 +5,7 @@ import {
   getJobsApi,
   updateJobApi,
 } from '../services/jobsApi';
-import { getStoredAccessToken } from '../services/apiClient';
+import { getStoredUser } from '../services/apiClient';
 
 const JobsContext = createContext(null);
 
@@ -17,7 +17,7 @@ export function JobsProvider({ children }) {
   // Load jobs from backend when app starts.
   useEffect(() => {
     async function loadJobs() {
-      if (!getStoredAccessToken()) {
+      if (!getStoredUser()) {
         setJobs([]);
         setLoadingJobs(false);
         setJobsError('');

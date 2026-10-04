@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { getInterviewsApi, updateInterviewApi } from '../services/interviewsApi';
-import { getStoredAccessToken } from '../services/apiClient';
+import { getStoredUser } from '../services/apiClient';
 
 const InterviewsContext = createContext(null);
 
@@ -11,7 +11,7 @@ export function InterviewsProvider({ children }) {
 
   useEffect(() => {
     async function loadInterviews() {
-      if (!getStoredAccessToken()) {
+      if (!getStoredUser()) {
         setInterviews([]);
         setLoadingInterviews(false);
         setInterviewsError('');

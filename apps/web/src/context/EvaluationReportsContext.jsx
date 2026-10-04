@@ -4,7 +4,7 @@ import {
   getEvaluationReportsApi,
   updateEvaluationReportApi,
 } from '../services/evaluationReportsApi';
-import { getStoredAccessToken } from '../services/apiClient';
+import { getStoredUser } from '../services/apiClient';
 
 const EvaluationReportsContext = createContext(null);
 
@@ -15,7 +15,7 @@ export function EvaluationReportsProvider({ children }) {
 
   useEffect(() => {
     async function loadEvaluationReports() {
-      if (!getStoredAccessToken()) {
+      if (!getStoredUser()) {
         setEvaluationReports([]);
         setLoadingEvaluationReports(false);
         setEvaluationReportsError('');

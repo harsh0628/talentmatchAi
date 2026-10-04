@@ -5,7 +5,7 @@ import {
   getCandidatesApi,
   updateCandidateApi,
 } from '../services/candidatesApi';
-import { getStoredAccessToken } from '../services/apiClient';
+import { getStoredUser } from '../services/apiClient';
 
 const CandidatesContext = createContext(null);
 
@@ -16,7 +16,7 @@ export function CandidatesProvider({ children }) {
 
   useEffect(() => {
     async function loadCandidates() {
-      if (!getStoredAccessToken()) {
+      if (!getStoredUser()) {
         setCandidates([]);
         setLoadingCandidates(false);
         setCandidatesError('');

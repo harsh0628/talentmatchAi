@@ -26,10 +26,6 @@ const userSchema = new mongoose.Schema(
 			type: Date,
 			default: null,
 		},
-		refreshTokenHash: {
-			type: String,
-			default: null,
-		},
 		role: {
 			type: String,
 			required: true,

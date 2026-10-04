@@ -91,9 +91,7 @@ console.log('\n🔐 Environment Variables Check...');
 const requiredEnvVars = [
   'MONGODB_URI',
   'CLIENT_URL',
-  'NODE_ENV',
-  'JWT_ACCESS_SECRET',
-  'JWT_REFRESH_SECRET'
+  'NODE_ENV'
 ];
 
 const hasAllRequired = requiredEnvVars.every(v => process.env[v]);

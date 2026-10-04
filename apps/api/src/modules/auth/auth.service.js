@@ -1,8 +1,7 @@
 const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
-const { randomUUID } = require('crypto');
+const crypto = require('crypto');
 const User = require('./users.model');
-const RefreshToken = require('./refreshTokens.model');
+const AuthSession = require('./authSessions.model');
 const AuthAudit = require('./authAudit.model');
 const env = require('../../config/env');
 
@@ -18,27 +17,6 @@ function isStrongPassword(password) {
 	return passwordRule.test(password);
 }
 
-function buildTokenPayload(user) {
-	return {
-		sub: user._id.toString(),
-		email: user.email,
-		role: user.role,
-		name: user.name,
-	};
-}
-
-function signAccessToken(user) {
-	return jwt.sign(buildTokenPayload(user), env.jwtAccessSecret, {
-		expiresIn: env.jwtAccessExpiresIn,
-	});
-}
-
-function signRefreshToken(user, tokenId) {
-	return jwt.sign({ ...buildTokenPayload(user), jti: tokenId }, env.jwtRefreshSecret, {
-		expiresIn: env.jwtRefreshExpiresIn,
-	});
-}
-
 function sanitizeUser(user) {
 	return {
 		id: user._id.toString(),
@@ -48,26 +26,20 @@ function sanitizeUser(user) {
 	};
 }
 
-async function buildSessionTokens(user) {
-	const refreshTokenId = randomUUID();
-	const accessToken = signAccessToken(user);
-	const refreshToken = signRefreshToken(user, refreshTokenId);
-	const refreshTokenHash = await bcrypt.hash(refreshToken, 10);
-	const decodedRefreshToken = jwt.decode(refreshToken);
-	const expiresAt = decodedRefreshToken?.exp ? new Date(decodedRefreshToken.exp * 1000) : new Date(Date.now() + env.jwtRefreshCookieMaxAgeMs);
+async function createSession(user) {
+	const sessionId = crypto.randomBytes(32).toString('hex');
+	const sessionHash = crypto.createHash('sha256').update(sessionId).digest('hex');
+	const expiresAt = new Date(Date.now() + env.sessionMaxAgeMs);
 
-	await User.findByIdAndUpdate(user._id, { refreshTokenHash });
-	await RefreshToken.create({
+	await AuthSession.create({
 		userId: user._id,
-		tokenId: refreshTokenId,
+		sessionHash,
 		expiresAt,
 	});
 
 	return {
 		user: sanitizeUser(user),
-		accessToken,
-		refreshToken,
-		refreshTokenId,
+		sessionId,
 	};
 }
 
@@ -107,7 +79,7 @@ async function registerUser(payload, context = {}) {
 
 	const passwordHash = await bcrypt.hash(password, 10);
 	const createdUser = await User.create({ name, email, passwordHash, role });
-	const result = await buildSessionTokens(createdUser);
+	const result = await createSession(createdUser);
 	await writeAuditEvent('register_success', createdUser._id, context, { role: createdUser.role });
 
 	return result;
@@ -171,7 +143,7 @@ async function loginUser(payload, context = {}) {
 		});
 	}
 
-	const result = await buildSessionTokens(user);
+	const result = await createSession(user);
 	await writeAuditEvent('login_success', user._id, context);
 	return result;
 }
@@ -185,89 +157,12 @@ async function getUserById(userId) {
 	return sanitizeUser(user);
 }
 
-async function revokeAllUserRefreshSessions(userId) {
-	await User.findByIdAndUpdate(userId, { refreshTokenHash: null });
-	await RefreshToken.updateMany(
-		{ userId, revokedAt: null },
-		{ $set: { revokedAt: new Date() } },
-	);
-}
-
-async function refreshSession(refreshToken, context = {}) {
-	let decoded;
-	try {
-		decoded = jwt.verify(refreshToken, env.jwtRefreshSecret);
-	} catch (error) {
-		const authError = new Error('Invalid or expired refresh token');
-		authError.statusCode = 401;
-		throw authError;
+async function clearSession(sessionId, userId, context = {}) {
+	if (sessionId) {
+		const sessionHash = crypto.createHash('sha256').update(sessionId).digest('hex');
+		await AuthSession.deleteOne({ sessionHash, userId });
 	}
-
-	const user = await User.findById(decoded.sub);
-	if (!user || !user.refreshTokenHash) {
-		const authError = new Error('Invalid refresh session');
-		authError.statusCode = 401;
-		throw authError;
-	}
-
-	const existingSession = await RefreshToken.findOne({ tokenId: decoded.jti, userId: user._id });
-	if (!existingSession || existingSession.revokedAt || existingSession.expiresAt < new Date()) {
-		await revokeAllUserRefreshSessions(user._id);
-		await writeAuditEvent('refresh_reuse_detected', user._id, context, {
-			reason: 'missing_or_revoked_refresh_session',
-			tokenId: decoded.jti || null,
-		});
-
-		const authError = new Error('Refresh token reuse detected. Please login again');
-		authError.statusCode = 401;
-		throw authError;
-	}
-
-	const isRefreshTokenValid = await bcrypt.compare(refreshToken, user.refreshTokenHash);
-	if (!isRefreshTokenValid) {
-		await revokeAllUserRefreshSessions(user._id);
-		await writeAuditEvent('refresh_reuse_detected', user._id, context, {
-			reason: 'refresh_token_hash_mismatch',
-			tokenId: decoded.jti || null,
-		});
-
-		const authError = new Error('Refresh token reuse detected. Please login again');
-		authError.statusCode = 401;
-		throw authError;
-	}
-
-	const rotatedSession = await buildSessionTokens(user);
-	existingSession.revokedAt = new Date();
-	existingSession.replacedByTokenId = rotatedSession.refreshTokenId;
-	await existingSession.save();
-
-	await writeAuditEvent('refresh_success', user._id, context, {
-		fromTokenId: decoded.jti || null,
-		toTokenId: rotatedSession.refreshTokenId,
-	});
-
-	return rotatedSession;
-}
-
-async function clearRefreshSession(userId, refreshToken, context = {}) {
-	let tokenId = null;
-	if (refreshToken) {
-		const decoded = jwt.decode(refreshToken);
-		tokenId = decoded?.jti || null;
-	}
-
-	await revokeAllUserRefreshSessions(userId);
-
-	if (tokenId) {
-		await RefreshToken.updateOne(
-			{ userId, tokenId },
-			{ $set: { revokedAt: new Date() } },
-		);
-	}
-
-	await writeAuditEvent('logout_success', userId, context, {
-		tokenId,
-	});
+	await writeAuditEvent('logout_success', userId, context);
 }
 
 async function checkEmailAvailability(emailInput) {
@@ -309,8 +204,7 @@ module.exports = {
 	registerUser,
 	loginUser,
 	getUserById,
-	refreshSession,
-	clearRefreshSession,
+	clearSession,
 	checkEmailAvailability,
 	listAuthAuditEvents,
 };

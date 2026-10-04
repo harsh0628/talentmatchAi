@@ -9,22 +9,22 @@ function buildRequestContext(req) {
 	};
 }
 
-function setRefreshCookie(res, refreshToken) {
-	res.cookie(env.jwtRefreshCookieName, refreshToken, {
+function setSessionCookie(res, sessionId) {
+	res.cookie(env.sessionCookieName, sessionId, {
 		httpOnly: true,
 		secure: env.nodeEnv === 'production',
 		sameSite: 'lax',
-		maxAge: env.jwtRefreshCookieMaxAgeMs,
-		path: '/api/auth',
+		maxAge: env.sessionMaxAgeMs,
+		path: '/',
 	});
 }
 
-function clearRefreshCookie(res) {
-	res.clearCookie(env.jwtRefreshCookieName, {
+function clearSessionCookie(res) {
+	res.clearCookie(env.sessionCookieName, {
 		httpOnly: true,
 		secure: env.nodeEnv === 'production',
 		sameSite: 'lax',
-		path: '/api/auth',
+		path: '/',
 	});
 }
 
@@ -68,14 +68,13 @@ async function register(req, res, next) {
 		}
 
 		const result = await authService.registerUser(req.body, buildRequestContext(req));
-		setRefreshCookie(res, result.refreshToken);
+		setSessionCookie(res, result.sessionId);
 
 		return res.status(201).json({
 			success: true,
 			message: 'User registered successfully',
 			data: {
 				user: result.user,
-				accessToken: result.accessToken,
 			},
 		});
 	} catch (error) {
@@ -94,37 +93,13 @@ async function login(req, res, next) {
 		}
 
 		const result = await authService.loginUser(req.body, buildRequestContext(req));
-		setRefreshCookie(res, result.refreshToken);
+		setSessionCookie(res, result.sessionId);
 
 		return res.status(200).json({
 			success: true,
 			message: 'Login successful',
 			data: {
 				user: result.user,
-				accessToken: result.accessToken,
-			},
-		});
-	} catch (error) {
-		next(error);
-	}
-}
-
-async function refresh(req, res, next) {
-	try {
-		const refreshToken = req.cookies?.[env.jwtRefreshCookieName];
-		if (!refreshToken) {
-			return res.status(401).json({ success: false, message: 'Refresh token is missing' });
-		}
-
-		const result = await authService.refreshSession(refreshToken, buildRequestContext(req));
-		setRefreshCookie(res, result.refreshToken);
-
-		return res.status(200).json({
-			success: true,
-			message: 'Access token refreshed successfully',
-			data: {
-				user: result.user,
-				accessToken: result.accessToken,
 			},
 		});
 	} catch (error) {
@@ -134,9 +109,9 @@ async function refresh(req, res, next) {
 
 async function logout(req, res, next) {
 	try {
-		const refreshToken = req.cookies?.[env.jwtRefreshCookieName];
-		await authService.clearRefreshSession(req.user.id, refreshToken, buildRequestContext(req));
-		clearRefreshCookie(res);
+		const sessionId = req.cookies?.[env.sessionCookieName];
+		await authService.clearSession(sessionId, req.user.id, buildRequestContext(req));
+		clearSessionCookie(res);
 
 		return res.status(200).json({
 			success: true,
@@ -196,7 +171,6 @@ async function me(req, res, next) {
 module.exports = {
 	register,
 	login,
-	refresh,
 	logout,
 	checkEmail,
 	getAuthAuditEvents,

@@ -1,95 +1,65 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
-import { loginApi, logoutApi, meApi, refreshApi, registerApi } from '../services/authApi';
-import {
-  clearStoredAuth,
-  getStoredAccessToken,
-  getStoredUser,
-  setStoredAccessToken,
-  setStoredAuth,
-} from '../services/apiClient';
+import { loginApi, logoutApi, meApi, registerApi } from '../services/authApi';
+import { clearStoredAuth, getStoredUser, setStoredAuth } from '../services/apiClient';
 
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [authUser, setAuthUser] = useState(getStoredUser());
-  const [accessToken, setAccessToken] = useState(getStoredAccessToken());
   const [authLoading, setAuthLoading] = useState(true);
 
   useEffect(() => {
     async function restoreSession() {
       try {
-        if (!accessToken) {
-          const refreshed = await refreshApi();
-          setAccessToken(refreshed.accessToken);
-          setAuthUser(refreshed.user);
-          setStoredAuth(refreshed.accessToken, refreshed.user);
-          setAuthLoading(false);
-          return;
-        }
-
-        const profile = await meApi(accessToken);
+        const profile = await meApi();
         setAuthUser(profile);
-        setStoredAuth(accessToken, profile);
+        setStoredAuth(profile);
       } catch (error) {
-        try {
-          const refreshed = await refreshApi();
-          setAccessToken(refreshed.accessToken);
-          setAuthUser(refreshed.user);
-          setStoredAuth(refreshed.accessToken, refreshed.user);
-        } catch (refreshError) {
-          clearStoredAuth();
-          setAuthUser(null);
-          setAccessToken('');
-        }
+        clearStoredAuth();
+        setAuthUser(null);
       } finally {
         setAuthLoading(false);
       }
     }
 
     restoreSession();
-  }, [accessToken]);
+  }, []);
 
   async function login(credentials) {
     const result = await loginApi(credentials);
-    setAccessToken(result.accessToken);
-    setStoredAccessToken(result.accessToken);
     setAuthUser(result.user);
-    setStoredAuth(result.accessToken, result.user);
+    setStoredAuth(result.user);
     return result.user;
   }
 
   async function register(userInput) {
     const result = await registerApi(userInput);
-    setAccessToken(result.accessToken);
-    setStoredAccessToken(result.accessToken);
     setAuthUser(result.user);
-    setStoredAuth(result.accessToken, result.user);
+    setStoredAuth(result.user);
     return result.user;
   }
 
   async function logout() {
     try {
-      await logoutApi(accessToken);
+      await logoutApi();
     } catch (error) {
-      // Ignore logout API errors and clear local auth regardless.
+      // Clear local state even when the server session has already expired.
     }
 
     clearStoredAuth();
-    setAccessToken('');
     setAuthUser(null);
   }
 
   const value = useMemo(
     () => ({
       authUser,
-      accessToken,
       authLoading,
-      isAuthenticated: Boolean(authUser && accessToken),
+      isAuthenticated: Boolean(authUser),
       login,
       register,
       logout,
     }),
-    [authUser, accessToken, authLoading],
+    [authUser, authLoading],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

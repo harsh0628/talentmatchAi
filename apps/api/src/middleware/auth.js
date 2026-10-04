@@ -1,32 +1,41 @@
-const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 const env = require('../config/env');
+const User = require('../modules/auth/users.model');
+const AuthSession = require('../modules/auth/authSessions.model');
 
-function parseBearerToken(authHeaderValue) {
-	if (!authHeaderValue || !authHeaderValue.startsWith('Bearer ')) {
-		return null;
-	}
-
-	return authHeaderValue.slice(7).trim();
+function hashSessionId(sessionId) {
+	return crypto.createHash('sha256').update(sessionId).digest('hex');
 }
 
-function requireAuth(req, res, next) {
-	const token = parseBearerToken(req.headers.authorization);
-
-	if (!token) {
-		return res.status(401).json({ success: false, message: 'Authorization token is missing' });
+async function requireAuth(req, res, next) {
+	const sessionId = req.cookies?.[env.sessionCookieName];
+	if (!sessionId) {
+		return res.status(401).json({ success: false, message: 'Login is required' });
 	}
 
 	try {
-		const decoded = jwt.verify(token, env.jwtAccessSecret);
+		const session = await AuthSession.findOne({
+			sessionHash: hashSessionId(sessionId),
+			expiresAt: { $gt: new Date() },
+		});
+		if (!session) {
+			return res.status(401).json({ success: false, message: 'Session expired. Please login again.' });
+		}
+
+		const user = await User.findById(session.userId);
+		if (!user) {
+			return res.status(401).json({ success: false, message: 'User account not found' });
+		}
+
 		req.user = {
-			id: decoded.sub,
-			email: decoded.email,
-			role: decoded.role,
-			name: decoded.name,
+			id: user._id.toString(),
+			email: user.email,
+			role: user.role,
+			name: user.name,
 		};
 		return next();
 	} catch (error) {
-		return res.status(401).json({ success: false, message: 'Invalid or expired token' });
+		return next(error);
 	}
 }
 
