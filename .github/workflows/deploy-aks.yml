@@ -1,0 +1,82 @@
+name: Build and deploy TalentMatch AI to AKS
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  RESOURCE_GROUP: myAKSResourceGroup
+  AKS_NAME: aks-web-demo
+  ACR_NAME: talentmatchacr2026
+  API_DEPLOYMENT: talentmatch-api
+  WEB_DEPLOYMENT: talentmatch-web
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Build API image in ACR
+        run: |
+          az acr build \
+            --registry "$ACR_NAME" \
+            --image "talentmatch-api:${GITHUB_SHA}" \
+            --file apps/api/Dockerfile \
+            apps/api
+
+      - name: Build frontend image in ACR
+        run: |
+          az acr build \
+            --registry "$ACR_NAME" \
+            --image "talentmatch-web:${GITHUB_SHA}" \
+            --file apps/web/Dockerfile \
+            --build-arg VITE_API_URL=/api \
+            apps/web
+
+      - name: Connect kubectl to AKS
+        run: |
+          az aks get-credentials \
+            --resource-group "$RESOURCE_GROUP" \
+            --name "$AKS_NAME" \
+            --overwrite-existing
+
+      - name: Ensure API Service is internal
+        run: |
+          kubectl patch service talentmatch-api \
+            --type='merge' \
+            -p '{"spec":{"type":"ClusterIP","ports":[{"name":"http","port":5000,"targetPort":5000}]}}'
+
+      - name: Deploy API image
+        run: |
+          kubectl set image deployment/"$API_DEPLOYMENT" \
+            api="$ACR_NAME.azurecr.io/talentmatch-api:${GITHUB_SHA}"
+          kubectl set env deployment/"$API_DEPLOYMENT" \
+            SESSION_COOKIE_SECURE=false
+
+      - name: Deploy frontend image
+        run: |
+          kubectl set image deployment/"$WEB_DEPLOYMENT" \
+            web="$ACR_NAME.azurecr.io/talentmatch-web:${GITHUB_SHA}"
+
+      - name: Wait for rollouts
+        run: |
+          kubectl rollout status deployment/"$API_DEPLOYMENT" --timeout=5m
+          kubectl rollout status deployment/"$WEB_DEPLOYMENT" --timeout=5m
+          kubectl get pods
+          kubectl get services
