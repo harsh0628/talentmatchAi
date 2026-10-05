@@ -1,126 +1,131 @@
+<div align="center">
+
+<img src="docs/thumbnail.png" alt="TalentMatch AI" width="100%" />
+
 # TalentMatch AI
 
-TalentMatch AI is a full-stack, AI-powered hiring workspace for recruiters and interviewers. It combines a React frontend, Node.js API, MongoDB persistence, and LLM/RAG-assisted candidate matching and evaluation workflows.
+**An AI-powered hiring workspace that tells recruiters _why_ a candidate matches, not just a percentage.**
 
-The project also includes a containerized Azure deployment path:
+Explainable match scores, skill-gap analysis, interview workflows, and a fully automated GitHub → ACR → AKS delivery pipeline.
 
-```text
-GitHub
-  -> GitHub Actions
-  -> Azure Container Registry
-  -> Azure Kubernetes Service
-  -> Live TalentMatch AI application
+![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=black)
+![Vite](https://img.shields.io/badge/Vite-646CFF?logo=vite&logoColor=white)
+![Node.js](https://img.shields.io/badge/Node.js-20+-339933?logo=nodedotjs&logoColor=white)
+![Express](https://img.shields.io/badge/Express-000000?logo=express&logoColor=white)
+![MongoDB](https://img.shields.io/badge/MongoDB-47A248?logo=mongodb&logoColor=white)
+![Gemini](https://img.shields.io/badge/Gemini-AI-8E75B2?logo=googlegemini&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-2496ED?logo=docker&logoColor=white)
+![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-2088FF?logo=githubactions&logoColor=white)
+![Azure AKS](https://img.shields.io/badge/Azure-AKS_%2B_ACR-0078D4?logo=microsoftazure&logoColor=white)
+
+[Features](#-features) · [Architecture](#-architecture) · [Quick Start](#-quick-start) · [Docker](#-docker-compose) · [Azure Deployment](#-cicd-and-azure-deployment) · [API](#-api-overview) · [Troubleshooting](#-troubleshooting)
+
+</div>
+
+---
+
+## The problem
+
+Resume screening is slow, and a bare "78% match" doesn't help a recruiter decide anything. TalentMatch AI compares a candidate with a job and explains the **strengths**, **missing skills**, and a **recommendation**, so the recruiter knows whether to shortlist or where to focus the interview.
+
+## ✨ Features
+
+| | |
+|---|---|
+| 🎯 **AI match scoring** | Compares job requirements with candidate profiles and returns a score with an explanation. |
+| 🧩 **Skill-gap analysis** | Highlights missing skills and suggests a learning plan. |
+| 🔎 **Lightweight RAG** | Ranks related jobs and candidates from MongoDB by keyword overlap and adds the top context to the prompt. |
+| 🛟 **Deterministic fallback** | If the model is unavailable or returns malformed output, validated heuristic scoring keeps the feature working. |
+| 👥 **Role-based access** | Admin, Recruiter, and Interviewer roles. |
+| 📅 **Interviews and evaluations** | Interview scheduling, evaluation reports, and benchmarks. |
+| 🔐 **Secure sessions** | bcrypt password hashing and HTTP-only, MongoDB-backed sessions (no JWTs). |
+| 📈 **Observability** | Prometheus-compatible `/metrics`, request logging, Helmet, CORS, and rate limiting. |
+| 🚀 **Automated delivery** | Push to `main` → GitHub Actions → ACR → AKS, tagged with the commit SHA. |
+
+> **A note on RAG:** retrieval is keyword-based over the app's own jobs and candidates. It is not (yet) a vector database or embedding search.
+
+## 🏗 Architecture
+
+### Runtime
+
+```mermaid
+flowchart LR
+    U[Recruiter Browser] --> LB[Frontend LoadBalancer]
+    LB --> N[Nginx<br/>static files + /api proxy]
+    N --> API[Node.js / Express API<br/>ClusterIP :5000]
+    API --> DB[(MongoDB)]
+    API --> G[Gemini]
+    API -. fallback .-> H[Heuristic scoring]
 ```
 
-## Highlights
+Nginx proxies `/api` to the internal API service, so the browser sees a single origin and the session cookie is sent consistently.
 
-- Recruiter workspace for managing jobs and candidates.
-- AI match scoring between job requirements and candidate profiles.
-- Skill-gap analysis.
-- LLM/RAG context using existing jobs and candidates.
-- Interview scheduling and evaluation workflows.
-- Benchmarking and evaluation reports.
-- Role-based access for Admin, Recruiter, and Interviewer users.
-- Password hashing with bcrypt.
-- HTTP-only server-side sessions without JWT access or refresh tokens.
-- Prometheus-compatible metrics endpoint.
-- Request logging, security headers, CORS, and rate limiting.
-- Production frontend build served by Nginx.
-- Docker Compose support for local container testing.
-- Automated ACR image builds and AKS deployments through GitHub Actions.
+### AI scoring flow
 
-## Technology stack
+```mermaid
+flowchart LR
+    A[Job + Candidate] --> B[Extract terms]
+    B --> C[Rank related jobs/candidates<br/>by keyword overlap]
+    C --> D[Build prompt with top context]
+    D --> E{Gemini configured<br/>and healthy?}
+    E -- yes --> F[Structured response]
+    E -- no --> G[Heuristic fallback]
+    F --> H[Validate and normalize]
+    G --> H
+    H --> I[Score + strengths + gaps + recommendation]
+```
 
-### Frontend
+### Delivery pipeline
 
-- React 18
-- Vite
-- React Router
-- Nginx for production static file serving and API reverse proxying
+```mermaid
+flowchart LR
+    P[git push main] --> GA[GitHub Actions]
+    GA -->|OIDC login| AZ[Azure]
+    AZ --> ACR[az acr build<br/>api + web images<br/>tag = commit SHA]
+    ACR --> AKS[AKS rollout]
+    AKS --> L[Live app]
+```
 
-### Backend
+## 🧰 Tech stack
 
-- Node.js 20+
-- Express
-- Mongoose
-- bcryptjs
-- HTTP-only MongoDB-backed sessions
-- Prometheus metrics with `prom-client`
-- Helmet, CORS, Morgan, and Express rate limiting
+| Layer | Technology |
+|---|---|
+| Frontend | React 18, Vite, React Router, Nginx |
+| Backend | Node.js 20+, Express, Mongoose, bcryptjs, `prom-client`, Helmet, CORS, Morgan, express-rate-limit |
+| AI | Google Gemini (`gemini-2.5-flash`) with heuristic fallback |
+| Data | MongoDB Atlas or Azure Cosmos DB for MongoDB |
+| Infra | Docker, GitHub Actions, Azure Container Registry, Azure Kubernetes Service |
 
-### Infrastructure
-
-- GitHub
-- GitHub Actions
-- Azure Container Registry
-- Azure Kubernetes Service
-- MongoDB Atlas or Azure Cosmos DB for MongoDB
-
-## Repository structure
+## 📁 Repository structure
 
 ```text
 .
 ├── apps/
-│   ├── api/
-│   │   ├── src/
-│   │   ├── Dockerfile
-│   │   └── .env.example
-│   └── web/
-│       ├── src/
-│       ├── Dockerfile
-│       └── nginx.conf
+│   ├── api/                  # Express API (Dockerfile, .env.example)
+│   └── web/                  # React + Vite frontend (Dockerfile, nginx.conf)
 ├── k8s/
-│   ├── api.yaml
-│   └── web.yaml
-├── .github/
-│   └── workflows/
-│       └── deploy-aks.yml
+│   ├── api.yaml              # API Deployment + ClusterIP Service
+│   └── web.yaml              # Frontend Deployment + LoadBalancer Service
+├── .github/workflows/
+│   └── deploy-aks.yml        # CI/CD to ACR and AKS
+├── docs/                     # Images used in this README
 ├── docker-compose.yml
 ├── DEPLOYMENT-NOTES.md
-├── package.json
-└── package-lock.json
+└── package.json
 ```
 
-## Prerequisites
+## 🚀 Quick start
 
-Install the following tools for local development:
-
-- Node.js 20 or later
-- npm
-- Git
-- MongoDB, MongoDB Atlas, or Docker Desktop
-
-For Azure deployment, also install:
-
-- Azure CLI
-- kubectl
-- An Azure subscription
-- An Azure Container Registry
-- An AKS cluster
-
-## Local development
-
-Clone the repository and install dependencies:
+**Prerequisites:** Node.js 20+, npm, Git, and MongoDB (local, Atlas, or Docker Desktop).
 
 ```bash
 git clone https://github.com/harsh0628/talentmatchAi.git
 cd talentmatchAi
 npm install
+cp apps/api/.env.example apps/api/.env      # Windows: Copy-Item apps\api\.env.example apps\api\.env
 ```
 
-Create the API environment file:
-
-```bash
-cp apps/api/.env.example apps/api/.env
-```
-
-On Windows PowerShell:
-
-```powershell
-Copy-Item apps\api\.env.example apps\api\.env
-```
-
-Update `apps/api/.env` with a MongoDB connection string and development configuration:
+Edit `apps/api/.env`:
 
 ```env
 PORT=5000
@@ -130,111 +135,151 @@ NODE_ENV=development
 SESSION_COOKIE_NAME=tm_session
 SESSION_MAX_AGE_MS=604800000
 SESSION_COOKIE_SECURE=false
-GEMINI_API_KEY=
+GEMINI_API_KEY=            # optional: leave empty to use heuristic scoring
 GEMINI_MODEL=gemini-2.5-flash
 AI_ENABLE_HEURISTIC_FALLBACK=true
 ```
 
-Start the frontend and backend:
+Run everything:
 
 ```bash
 npm run dev
 ```
 
-Open:
+| Service | URL |
+|---|---|
+| Frontend | http://localhost:5173 |
+| API | http://localhost:5000 |
+| Health | http://localhost:5000/health |
+| Metrics | http://localhost:5000/metrics |
 
-- Frontend: <http://localhost:5173>
-- API: <http://localhost:5000>
-- API health: <http://localhost:5000/health>
-- API metrics: <http://localhost:5000/metrics>
+If the root command is unavailable, run `npm run dev:api` and `npm run dev:web` separately.
 
-If the root development command is unavailable, run the applications separately:
+## 🐳 Docker Compose
 
-```bash
-npm run dev:api
-npm run dev:web
-```
-
-## Docker Compose
-
-Docker Compose runs MongoDB, the API, and the production frontend together:
+Runs MongoDB, the API, and the production frontend together.
 
 ```bash
 docker compose up --build -d
-```
-
-Open the application at:
-
-<http://localhost:5173>
-
-Verify the API:
-
-```bash
 curl http://localhost:5000/health
 ```
 
-View service status and logs:
+App: http://localhost:5173
 
 ```bash
-docker compose ps
-docker compose logs -f api
-docker compose logs -f web
+docker compose ps                # status
+docker compose logs -f api       # logs
+docker compose down              # stop
+docker compose down -v           # stop and remove the MongoDB demo volume
 ```
 
-Stop the services:
-
-```bash
-docker compose down
-```
-
-Remove the MongoDB demo volume as well:
-
-```bash
-docker compose down -v
-```
-
-The frontend uses `/api` and Nginx proxies requests to the API container. This keeps authentication cookies on the same browser origin.
-
-## Authentication
-
-The application uses a simple server-side session model:
+## 🔐 Authentication
 
 1. The user logs in with email and password.
-2. The API creates a random session identifier.
-3. A hash of the identifier is stored in MongoDB.
-4. The raw identifier is sent as an HTTP-only cookie.
-5. Protected API requests are authorized using that cookie.
-6. Logout removes the session from MongoDB and clears the cookie.
+2. The API creates a random session ID and stores its **hash** in MongoDB.
+3. The raw ID is sent as an **HTTP-only** cookie.
+4. Protected requests are authorized from that cookie.
+5. Logout deletes the session and clears the cookie.
 
-JWT access tokens and refresh tokens are not used.
+Use `SESSION_COOKIE_SECURE=false` for an HTTP/IP demo and `true` behind HTTPS.
 
-For an HTTP IP-based demo, use:
+## ☁️ CI/CD and Azure deployment
 
-```env
-SESSION_COOKIE_SECURE=false
+A push to `main` (or a manual run) triggers `.github/workflows/deploy-aks.yml`, which:
+
+1. Logs in to Azure with **GitHub OIDC** (no long-lived client secret).
+2. Builds the API image in ACR.
+3. Builds the web image in ACR with `VITE_API_URL=/api`.
+4. Tags both images with the **commit SHA** (immutable, traceable releases).
+5. Gets AKS credentials and ensures the API Service is internal on port `5000`.
+6. Updates both Deployments and waits for the rollouts to finish.
+
+```bash
+git add .
+git commit -m "Describe the change"
+git push origin main
 ```
 
-For HTTPS production hosting, use:
+<details>
+<summary><b>Azure resources and identities</b></summary>
 
-```env
-SESSION_COOKIE_SECURE=true
-```
+| Resource | Name |
+|---|---|
+| Container Registry | `talentmatchacr2026` (resource group `ai-talentmatch`) |
+| AKS cluster | `aks-web-demo` (resource group `myAKSResourceGroup`) |
 
-## API overview
+- **GitHub Actions identity** pushes images: `AcrPush`, registry-scoped `Contributor` (for `az acr build`), and `Contributor` on the AKS resource group.
+- **AKS kubelet identity** pulls images: `AcrPull`.
+- The ACR is private. The frontend is a public `LoadBalancer`; the API is an internal `ClusterIP`.
 
-Public endpoints:
+Repository secrets: `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`.
+
+Federated credential:
 
 ```text
-GET  /
-GET  /health
-GET  /api/health
-GET  /metrics
+Issuer:   https://token.actions.githubusercontent.com
+Subject:  repo:harsh0628/talentmatchAi:ref:refs/heads/main
+Audience: api://AzureADTokenExchange
+```
+
+</details>
+
+<details>
+<summary><b>Manual AKS deployment</b></summary>
+
+```bash
+az aks get-credentials --resource-group myAKSResourceGroup --name aks-web-demo --overwrite-existing
+kubectl get nodes
+
+az acr build --registry talentmatchacr2026 --resource-group ai-talentmatch \
+  --image talentmatch-api:v2 --file apps/api/Dockerfile apps/api
+
+az acr build --registry talentmatchacr2026 --resource-group ai-talentmatch \
+  --image talentmatch-web:v2 --file apps/web/Dockerfile \
+  --build-arg VITE_API_URL=/api apps/web
+```
+
+Replace the MongoDB placeholder in `k8s/api.yaml` with a real connection string (never commit it), then:
+
+```bash
+kubectl apply -f k8s/api.yaml
+kubectl apply -f k8s/web.yaml
+kubectl rollout status deployment/talentmatch-api
+kubectl rollout status deployment/talentmatch-web
+kubectl get service talentmatch-web
+
+FRONTEND_EXTERNAL_IP=$(kubectl get service talentmatch-web -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+kubectl set env deployment/talentmatch-api CLIENT_URL="http://$FRONTEND_EXTERNAL_IP" SESSION_COOKIE_SECURE=false
+```
+
+Verify the deployed commit tag:
+
+```bash
+kubectl get deployment talentmatch-api -o jsonpath='{.spec.template.spec.containers[0].image}{"\n"}'
+kubectl get deployment talentmatch-web -o jsonpath='{.spec.template.spec.containers[0].image}{"\n"}'
+```
+
+Roll back:
+
+```bash
+kubectl rollout undo deployment/talentmatch-api
+kubectl rollout undo deployment/talentmatch-web
+```
+
+</details>
+
+## 📡 API overview
+
+**Public**
+
+```text
+GET  /  /health  /api/health  /metrics
 POST /api/auth/register
 POST /api/auth/login
 GET  /api/auth/check-email
 ```
 
-Authenticated endpoints include:
+**Authenticated**
 
 ```text
 GET/POST/PATCH/DELETE  /api/jobs
@@ -250,260 +295,71 @@ GET                    /api/auth/me
 POST                   /api/auth/logout
 ```
 
-Unauthenticated requests to protected endpoints should return:
+Unauthenticated calls to protected routes return `401` with `{ "success": false, "message": "Login is required" }`.
 
-```json
-{
-  "success": false,
-  "message": "Login is required"
-}
-```
+## 🛠 Troubleshooting
 
-## Production build
+<details>
+<summary><b>401 "Login is required" on protected endpoints</b></summary>
 
-Build the frontend:
-
-```bash
-npm run build --workspace @talentmatch/web
-```
-
-Validate the API package:
+1. The frontend must call `/api`, not a separate API IP.
+2. The frontend image must contain the Nginx proxy.
+3. Set `SESSION_COOKIE_SECURE=false` when using an HTTP IP.
+4. Confirm login returns `Set-Cookie: tm_session` and later requests send it.
+5. The API Service must be `ClusterIP` on port `5000`.
 
 ```bash
-npm run build --workspace @talentmatch/api
-```
-
-The frontend output is generated in `apps/web/dist`.
-
-## Azure architecture
-
-The production demo uses the following Azure resources:
-
-- Azure Container Registry: `talentmatchacr2026`
-- AKS cluster: `aks-web-demo`
-- AKS resource group: `myAKSResourceGroup`
-- ACR resource group: `ai-talentmatch`
-
-The AKS kubelet identity has `AcrPull`, allowing cluster nodes to pull private images from ACR.
-
-The API is exposed internally as a Kubernetes `ClusterIP` Service. The frontend is exposed publicly using a `LoadBalancer` Service. Nginx forwards frontend requests under `/api` to the internal API Service:
-
-```text
-Browser -> Frontend LoadBalancer -> Nginx /api proxy -> API ClusterIP -> MongoDB
-```
-
-This same-origin routing is important because it allows the session cookie to be sent consistently between the frontend and API.
-
-## Manual AKS deployment
-
-Connect to the cluster:
-
-```bash
-az aks get-credentials \
-  --resource-group myAKSResourceGroup \
-  --name aks-web-demo \
-  --overwrite-existing
-```
-
-Verify the nodes:
-
-```bash
-kubectl get nodes
-```
-
-Build the API image in ACR:
-
-```bash
-az acr build \
-  --registry talentmatchacr2026 \
-  --resource-group ai-talentmatch \
-  --image talentmatch-api:v2 \
-  --file apps/api/Dockerfile \
-  apps/api
-```
-
-Build the frontend image with same-origin API routing:
-
-```bash
-az acr build \
-  --registry talentmatchacr2026 \
-  --resource-group ai-talentmatch \
-  --image talentmatch-web:v2 \
-  --file apps/web/Dockerfile \
-  --build-arg VITE_API_URL=/api \
-  apps/web
-```
-
-Before applying `k8s/api.yaml`, replace the MongoDB placeholder with a real connection string. Never commit database credentials to GitHub.
-
-Apply the manifests:
-
-```bash
-kubectl apply -f k8s/api.yaml
-kubectl apply -f k8s/web.yaml
-```
-
-Wait for the deployments:
-
-```bash
-kubectl rollout status deployment/talentmatch-api
-kubectl rollout status deployment/talentmatch-web
-```
-
-Get the frontend public address:
-
-```bash
-kubectl get service talentmatch-web
-```
-
-Then configure the API CORS origin:
-
-```bash
-FRONTEND_EXTERNAL_IP=$(kubectl get service talentmatch-web \
-  -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
-
-kubectl set env deployment/talentmatch-api \
-  CLIENT_URL="http://$FRONTEND_EXTERNAL_IP" \
-  SESSION_COOKIE_SECURE=false
-```
-
-Open:
-
-```text
-http://<FRONTEND_EXTERNAL_IP>
-```
-
-## Automated deployment with GitHub Actions
-
-The workflow at `.github/workflows/deploy-aks.yml` runs on every push to `main`.
-
-It:
-
-1. Authenticates to Azure using GitHub OIDC.
-2. Builds the API image in ACR.
-3. Builds the frontend image in ACR with `VITE_API_URL=/api`.
-4. Tags each image with the Git commit SHA.
-5. Gets AKS credentials.
-6. Ensures the API Service is internal on port `5000`.
-7. Updates the API and frontend Deployments.
-8. Waits for both rollouts to complete.
-
-Configure these GitHub repository secrets:
-
-```text
-AZURE_CLIENT_ID
-AZURE_TENANT_ID
-AZURE_SUBSCRIPTION_ID
-```
-
-The Azure identity used by GitHub Actions requires:
-
-- `AcrPush` on `talentmatchacr2026`
-- Registry-scoped `Contributor` for `az acr build`
-- `Contributor` on `myAKSResourceGroup`
-
-The GitHub OIDC federated credential must match:
-
-```text
-Issuer:   https://token.actions.githubusercontent.com
-Subject:  repo:harsh0628/talentmatchAi:ref:refs/heads/main
-Audience: api://AzureADTokenExchange
-```
-
-Deploy a change:
-
-```bash
-git add .
-git commit -m "Describe the change"
-git push origin main
-```
-
-Monitor the workflow under the repository's **Actions** tab.
-
-Verify the deployed commit tag:
-
-```bash
-kubectl get deployment talentmatch-api \
-  -o jsonpath='{.spec.template.spec.containers[0].image}{"\n"}'
-
-kubectl get deployment talentmatch-web \
-  -o jsonpath='{.spec.template.spec.containers[0].image}{"\n"}'
-```
-
-## Troubleshooting
-
-### Protected API endpoints return `401 Login is required`
-
-Check that:
-
-1. The frontend uses `/api`, not a separate API external IP.
-2. The frontend image contains the Nginx proxy.
-3. The API has `SESSION_COOKIE_SECURE=false` when using an HTTP IP.
-4. The login response includes `Set-Cookie: tm_session`.
-5. Later requests include `Cookie: tm_session`.
-6. The API Service is `ClusterIP` on port `5000`.
-
-Useful commands:
-
-```bash
-kubectl get services
-kubectl get pods
+kubectl get services && kubectl get pods
 kubectl logs deployment/talentmatch-api --tail=100
 kubectl describe deployment talentmatch-web
 ```
 
-### GitHub Actions cannot authenticate to Azure
+</details>
 
-Check the OIDC federated credential and confirm the subject matches the `main` branch exactly.
+<details>
+<summary><b>GitHub Actions cannot authenticate to Azure</b></summary>
 
-### ACR cannot be found
+Check the OIDC federated credential; its subject must match the `main` branch exactly.
 
-Confirm the registry subscription and resource group:
+</details>
 
-```bash
-az acr show \
-  --name talentmatchacr2026 \
-  --resource-group ai-talentmatch \
-  --output table
-```
-
-The workflow must use `--resource-group ai-talentmatch` for both ACR builds.
-
-### Roll back a deployment
+<details>
+<summary><b>ACR cannot be found</b></summary>
 
 ```bash
-kubectl rollout undo deployment/talentmatch-api
-kubectl rollout undo deployment/talentmatch-web
+az acr show --name talentmatchacr2026 --resource-group ai-talentmatch --output table
 ```
 
-## Demo presentation flow
+Both ACR builds in the workflow must use `--resource-group ai-talentmatch`.
 
-For a live senior/demo presentation:
+</details>
 
-1. Introduce TalentMatch AI and the hiring problem it addresses.
-2. Explain the React, Node.js, MongoDB, and LLM/RAG architecture.
-3. Show the GitHub repository and project structure.
-4. Show the AKS cluster and ACR resources in Azure.
-5. Demonstrate a GitHub Actions deployment from a code change.
-6. Open the live frontend URL.
-7. Register or log in.
-8. Create or review a job.
-9. Add a candidate.
-10. Run AI match scoring with RAG context.
-11. Demonstrate skill-gap analysis.
-12. Show interview and evaluation workflows.
-13. Show benchmark results and API health.
-14. Explain that the deployed image is tagged with the Git commit SHA.
+## 🔒 Security notes
 
-## Security notes
+- Never commit `.env` files, database credentials, Gemini keys, or Kubernetes Secret values.
+- Use GitHub OIDC rather than long-lived Azure secrets.
+- Use HTTPS with `SESSION_COOKIE_SECURE=true` in real production.
+- Prefer managed MongoDB (Atlas or Cosmos DB) over a single MongoDB pod.
+- Replace the broad demo permissions with least-privilege roles before production.
+- Rotate any credential that has appeared in logs, screenshots, commits, or chat.
 
-- Never commit `.env`, database credentials, Gemini keys, or Kubernetes Secret values.
-- Use GitHub OIDC instead of long-lived Azure client secrets.
-- Use HTTPS and `SESSION_COOKIE_SECURE=true` for real production hosting.
-- Prefer MongoDB Atlas or Azure Cosmos DB for MongoDB instead of a single MongoDB pod in AKS.
-- Replace broad demo permissions with least-privilege Azure and Kubernetes roles before production use.
-- Rotate any credential that has been exposed in logs, screenshots, commits, or chat.
+## 🗺 Roadmap
 
-## Deployment documentation
+- [ ] HTTPS ingress
+- [ ] Microsoft Entra ID and Azure RBAC
+- [ ] Least-privilege deployment permissions
+- [ ] Managed MongoDB
+- [ ] Stronger probes, resource limits, and autoscaling
+- [ ] Vector-based (embedding) retrieval
 
-The chronological deployment log is maintained in [DEPLOYMENT-NOTES.md](./DEPLOYMENT-NOTES.md).
+## 📄 More documentation
+
+The chronological deployment log is in [DEPLOYMENT-NOTES.md](./DEPLOYMENT-NOTES.md).
+
+---
+
+<div align="center">
+
+Built by [@harsh0628](https://github.com/harsh0628). If this project helped you, consider giving it a ⭐
+
+</div>
