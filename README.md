@@ -18,11 +18,19 @@ Explainable match scores, skill-gap analysis, interview workflows, and a fully a
 ![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-2088FF?logo=githubactions&logoColor=white)
 ![Azure AKS](https://img.shields.io/badge/Azure-AKS_%2B_ACR-0078D4?logo=microsoftazure&logoColor=white)
 
-[Features](#-features) · [Architecture](#-architecture) · [Quick Start](#-quick-start) · [Docker](#-docker-compose) · [Azure Deployment](#-cicd-and-azure-deployment) · [API](#-api-overview) · [Troubleshooting](#-troubleshooting)
+[![Watch the demo on YouTube](https://img.shields.io/badge/▶_Watch_the_Demo-YouTube-FF0000?style=for-the-badge&logo=youtube&logoColor=white)](https://youtu.be/VlWc3UWkbfY)
+
+[Demo](#-demo-video) · [Features](#-features) · [Architecture](#-architecture) · [Quick Start](#-quick-start) · [Docker](#-docker-compose) · [Azure Deployment](#-cicd-and-azure-deployment) · [API](#-api-overview) · [Troubleshooting](#-troubleshooting)
 
 </div>
 
 ---
+
+## 🎬 Demo video
+
+[![TalentMatch AI demo video](https://img.youtube.com/vi/VlWc3UWkbfY/0.jpg)](https://www.youtube.com/watch?v=VlWc3UWkbfY)
+
+▶ **[Watch the 3.5-minute demo on YouTube](https://youtu.be/VlWc3UWkbfY)**. It covers the live AI match workflow (job + candidate → score, strengths, gaps), then the GitHub Actions → ACR → AKS deployment.
 
 ## The problem
 
